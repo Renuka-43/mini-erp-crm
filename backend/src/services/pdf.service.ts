@@ -32,7 +32,7 @@ export const generateChallanPDF = (challan: any): Promise<Buffer> => {
       // Customer Box
       doc.fillColor('#0F172A').fontSize(12).text('CUSTOMER DETAILS:', 320, topY);
       doc.fontSize(10).fillColor('#334155');
-      doc.text(`Name: ${customer.name || N/A}`, 320, topY + 18);
+      doc.text(`Name: ${customer.name || 'N/A'}`, 320, topY + 18);
       doc.text(`Business: ${customer.businessName || 'N/A'}`, 320, topY + 32);
       doc.text(`Mobile: ${customer.mobile || 'N/A'}`, 320, topY + 46);
       doc.text(`GST No: ${customer.gstNumber || 'N/A'}`, 320, topY + 60);

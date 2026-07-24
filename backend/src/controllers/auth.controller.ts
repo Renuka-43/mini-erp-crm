@@ -25,7 +25,7 @@ export const login = async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, name: user.name, role: user.role },
       config.jwtSecret,
-      { expiresIn: config.jwtExpiresIn }
+      { expiresIn: config.jwtExpiresIn as any }
     );
 
     return res.json({
@@ -98,7 +98,7 @@ export const switchRole = async (req: AuthRequest, res: Response) => {
     const token = jwt.sign(
       { id: targetUser.id, email: targetUser.email, name: targetUser.name, role: targetUser.role },
       config.jwtSecret,
-      { expiresIn: config.jwtExpiresIn }
+      { expiresIn: config.jwtExpiresIn as any }
     );
 
     return res.json({
