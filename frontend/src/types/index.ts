@@ -38,6 +38,7 @@ export interface Customer {
   createdAt: string;
   updatedAt: string;
   followUps?: CustomerFollowUp[];
+  salesChallans?: SalesChallan[];
   _count?: { followUps: number; salesChallans: number };
 }
 
