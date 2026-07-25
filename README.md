@@ -1,122 +1,159 @@
 # Mini ERP + CRM Operations Portal
 
-> **Full Stack Developer Case Study Submission**  
-> *Target Domain*: Wholesale & Distribution Operations Management  
-> *Architecture*: React (Vite + TypeScript + Tailwind CSS) + Express.js (TypeScript + Prisma ORM + JWT + Zod + PDFKit)
+A lightweight ERP and CRM system built for wholesale and distribution businesses. It brings together customer relationship management, product and inventory tracking, and sales challan generation in one place, so sales, warehouse, and accounts teams can work from a single system instead of scattered spreadsheets.
 
----
+## Overview & Highlights
 
-## 🌟 Overview & Highlights
+- Role-based access for four user types — Admin, Sales, Warehouse, Accounts — each seeing only the modules relevant to their work.
+- Customer records with status tracking (Lead, Active, Inactive), customer type classification, search, and a follow-up log for CRM activity.
+- Product and inventory management with low-stock thresholds and a full stock movement history (what changed, why, and who made the change).
+- Sales challans that can be saved as Draft or Confirmed, with automatic challan numbering, stock validation on confirmation, and downloadable PDF invoices.
+- Historical accuracy: challans store a snapshot of customer and product details at the time of creation, so later edits to master data don't alter past records.
+- Runs locally, in Docker, or deployed to Render (backend + PostgreSQL) and Vercel (frontend).
 
-This repository contains a full-stack Mini ERP & CRM system built for wholesale and distribution companies. It addresses customer lifecycle management, product cataloging, stock control, sales challan generation, stock movement audit logging, and PDF invoice generation.
+## Live Deployment
 
-### Key Capabilities
+- Frontend: https://mini-erp-crm-pi.vercel.app
+- Backend API: https://mini-erp-crm-1-ikjy.onrender.com
+- GitHub Repository: https://github.com/Renuka-43/mini-erp-crm
 
-1. **Role-Based Access Control (RBAC)**:
-   - `Admin`: Full system access across all modules.
-   - `Sales`: Customer CRM management, sales challan generation (Draft/Confirm), stock view.
-   - `Warehouse`: Product catalog editing, manual stock adjustments (IN/OUT), low-stock alert monitoring.
-   - `Accounts`: View sales challans, customer billing history, PDF invoice downloads.
-   - **Interactive Role Switcher Banner**: Switch between roles in 1 click in the top navbar.
+## Test Credentials
 
-2. **Customer CRM Module**:
-   - Customer status tracking (`LEAD`, `ACTIVE`, `INACTIVE`) & customer type classification (`RETAIL`, `WHOLESALE`, `DISTRIBUTOR`).
-   - Paginated table search by name, email, mobile, or business name.
-   - Complete follow-up note activity log with automated next follow-up date scheduling.
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | admin@minierp.com | password123 |
+| Sales | sales@minierp.com | password123 |
+| Warehouse | warehouse@minierp.com | password123 |
+| Accounts | accounts@minierp.com | password123 |
 
-3. **Product & Inventory Module**:
-   - SKU management, category tagging, unit pricing, warehouse bin locations, min-stock threshold alerts.
-   - **Manual Stock Adjustments**: Instant stock IN/OUT adjustments with audit reason tracking.
-   - **Stock Movement Log**: Comprehensive, immutable audit trail tracking product SKU, quantity change, movement type, reason, created by user, and timestamp.
+## Tech Stack
 
-4. **Sales Challan & Invoice Flow**:
-   - Auto-generated challan numbers (e.g. `CH-20260721-0001`).
-   - Create as **Draft** or **Confirmed**.
-   - **Atomic Database Transaction**: When confirmed, checks stock sufficiency. If stock is insufficient, returns an itemized `400 Bad Request` error. If valid, atomically decrements product inventory and logs `OUT` stock movement records.
-   - **Historical Snapshotting**: Stores JSON snapshots of customer and product details at creation time to protect historical records against future master data changes.
-   - **PDF Invoice Download**: Built-in backend PDFKit engine producing crisp, downloadable sales dockets.
+**Frontend**: React, TypeScript, Vite, Tailwind CSS
 
-5. **DevOps & Containers**:
-   - Dual-database strategy: SQLite out-of-the-box for instant zero-dependency local running + PostgreSQL ready for cloud/containerized environments.
-   - `docker-compose.yml` for single-command deployment.
-   - `mini-erp-crm.postman_collection.json` containing pre-configured, ready-to-test API calls.
+**Backend**: Node.js, TypeScript, Express.js, Prisma ORM, JWT authentication, Zod validation, PDFKit
 
----
+**Database**: PostgreSQL
 
-## 🔑 Test Credentials Table
+**Deployment**: Vercel (frontend), Render (backend + PostgreSQL)
 
-| Role | Email | Password | Allowed Access Summary |
-| :--- | :--- | :--- | :--- |
-| **Admin** | `admin@minierp.com` | `password123` | Full privileges across all modules |
-| **Sales** | `sales@minierp.com` | `password123` | Customers CRM, Create Challans, View Products |
-| **Warehouse** | `warehouse@minierp.com` | `password123` | Inventory, Stock Adjustments, Low Stock Alerts |
-| **Accounts** | `accounts@minierp.com` | `password123` | View Sales Challans, Customer Billing, PDF Export |
+## Architecture Overview
 
----
+The system is split into two independently deployed applications that communicate over REST:
 
-## 🚀 Local Setup Instructions
+- **Frontend (React SPA)**: handles routing, forms, and state. Calls the backend API using a base URL configured through an environment variable (`VITE_API_URL`), so the same build can point at different backend environments without code changes.
+- **Backend (Express API)**: exposes REST endpoints grouped by domain (auth, customers, products, challans). Each request is validated with Zod before touching the database, and protected routes are guarded by JWT middleware that also enforces role-based access (Admin, Sales, Warehouse, Accounts).
+- **Database (PostgreSQL via Prisma)**: schema is defined in `prisma/schema.prisma` with seven core models — `User`, `Customer`, `CustomerFollowUp`, `Product`, `StockMovement`, `SalesChallan`, `SalesChallanItem`. Prisma migrations version the schema; `prisma/seed.ts` populates test users and sample data.
+- **Sales challan business logic**: when a challan is confirmed, stock sufficiency is checked and inventory is decremented inside a single database transaction, so a failed check never leaves partial stock changes. Product and customer details are snapshotted onto the challan at creation time, so later edits to a product or customer don't rewrite historical challan records.
+
+## Core Modules Implemented
+
+**1. Authentication and Roles**
+Login with JWT-based authentication. Four roles supported: Admin, Sales, Warehouse, Accounts, each with different access to the modules below.
+
+**2. Customer CRM Module**
+Add, edit, and search customers. Each customer record includes name, mobile, email, business name, optional GST number, customer type (Retail/Wholesale/Distributor), address, status (Lead/Active/Inactive), follow-up date, and notes. Customer detail page shows full follow-up history, and new follow-up notes can be added from there.
+
+**3. Product and Inventory Module**
+Add and edit products with name, SKU, category, unit price, current stock, minimum stock alert threshold, and warehouse location. Every stock change is written to a stock movement log recording product, quantity changed, movement type (IN/OUT), reason, the user who made the change, and a timestamp.
+
+**4. Sales Challan Module**
+Create a challan by selecting a customer, adding multiple products with quantities, and saving as Draft or Confirmed. Challan numbers are generated automatically. Confirming a challan reduces stock inside a transaction; if stock is insufficient, the API returns an error and no partial update occurs. Each challan stores a snapshot of product and customer data at creation time, not just their IDs, so later edits to master data don't change historical challans.
+
+## Bonus Features
+
+| Feature | Status |
+| --- | --- |
+| Docker setup | Implemented — `docker-compose.yml` runs frontend, backend, and PostgreSQL together |
+| Export invoice as PDF | Implemented — `GET /api/challans/:id/pdf` |
+| GitHub Actions deployment | Not implemented |
+| Upload product image to AWS S3 | Not implemented |
+
+## Local Setup
 
 ### Prerequisites
-- **Node.js** (v18+)
-- **npm** or **yarn**
+- Node.js v18+
+- npm
+- A PostgreSQL database (local or hosted)
 
-### 1. Clone & Setup Backend
+### Backend
 
 ```bash
 cd backend
+cp .env.example .env
+# edit .env and set DATABASE_URL to your PostgreSQL connection string
 npm install
-npm run prisma:migrate
+npx prisma generate
+npx prisma migrate deploy
 npm run seed
 npm run dev
 ```
-*Backend API will run at `http://localhost:5000`.*
 
-### 2. Setup & Run Frontend
+Backend runs at `http://localhost:5000`.
+
+### Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-*Frontend web application will run at `http://localhost:5173`.*
 
----
+Frontend runs at `http://localhost:5173`.
 
-## 🐳 Docker Deployment (1-Command Launch)
-
-Ensure Docker Desktop is running, then execute from the project root:
+### Docker (alternative, runs both services + Postgres together)
 
 ```bash
 docker-compose up --build -d
 ```
 
-- **Frontend App**: `http://localhost`
-- **Backend API**: `http://localhost:5000`
-- **PostgreSQL Database**: `localhost:5432`
+- Frontend: `http://localhost`
+- Backend API: `http://localhost:5000`
+- PostgreSQL: `localhost:5432`
 
----
+## Environment Variables
 
-## ☁️ Deployment Guide (Free Hosting Providers)
+### Backend (`backend/.env`)
 
-### Frontend Deployment (Vercel / Netlify)
-1. Push code to GitHub repository.
-2. Link the `frontend/` directory in Vercel or Netlify.
-3. Set Build Command: `npm run build`
-4. Set Output Directory: `dist`
-5. Set Environment Variable: `VITE_API_URL=https://your-backend.onrender.com/api`
+| Variable | Purpose | Example |
+| --- | --- | --- |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/dbname` |
+| `JWT_SECRET` | Secret used to sign JWTs | any long random string |
+| `JWT_EXPIRES_IN` | Token expiry | `1d` |
+| `PORT` | Port the server listens on | `5000` |
+| `CORS_ORIGIN` | Allowed frontend origin | `https://mini-erp-crm-pi.vercel.app` |
 
-### Backend Deployment (Render / Railway / Fly.io)
-1. Link `backend/` root in Render Web Service.
-2. Build Command: `npm install && npx prisma generate && npm run build`
+On Render, these are set under the backend service's Environment tab rather than a committed `.env` file.
+
+### Frontend
+
+| Variable | Purpose | Example |
+| --- | --- | --- |
+| `VITE_API_URL` | Base URL the frontend calls | `https://mini-erp-crm-1-ikjy.onrender.com/api` |
+
+## Deployment Steps (as actually used for this submission)
+
+### Database — Render PostgreSQL
+1. Render Dashboard → New → PostgreSQL → create instance.
+2. Copy the Internal Database URL.
+
+### Backend — Render Web Service
+1. Connect the GitHub repository, root directory `backend/`.
+2. Build Command:
+   ```
+   npm install --include=dev && npx prisma generate && npx prisma migrate deploy && npm run seed && npm run build
+   ```
 3. Start Command: `npm run start`
-4. Set Environment Variables:
-   - `DATABASE_URL`: Your PostgreSQL connection string (Supabase / Neon / Render Postgres)
-   - `JWT_SECRET`: `your_secure_jwt_secret`
-   - `PORT`: `5000`
+4. Environment variables: `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `PORT`, `CORS_ORIGIN` (see table above).
 
----
+Note: `npm run seed` is included in the build command for this submission so the reviewer's environment is guaranteed to have test data. In a real production setup this should be removed after the first deploy, since it currently clears and recreates seed data on every build (see Known Limitations).
 
-## 📡 REST API Overview & Endpoints
+### Frontend — Vercel
+1. Connect the GitHub repository, root directory `frontend/`.
+2. Build Command: `npm run build`
+3. Output Directory: `dist`
+4. Environment variable: `VITE_API_URL` pointing at the deployed backend's `/api` path.
+
+## API Endpoints
 
 ### Auth
 - `POST /api/auth/login` - Authenticate user & receive JWT token
@@ -140,15 +177,7 @@ docker-compose up --build -d
 - `GET /api/challans` - List sales challans
 - `GET /api/challans/:id` - Challan details & snapshots
 - `POST /api/challans` - Create sales challan (Draft or Confirmed)
-- `PATCH /api/challans/:id/status` - Transition status (`DRAFT` ➔ `CONFIRMED` / `CONFIRMED` ➔ `CANCELLED`)
-- `GET /api/challans/:id/pdf` - Download PDF Invoice / Sales Docket
+- `PATCH /api/challans/:id/status` - Transition status (`DRAFT` → `CONFIRMED` / `CONFIRMED` → `CANCELLED`)
+- `GET /api/challans/:id/pdf` - Download PDF invoice / sales docket
 
----
-
-## 📽️ Submission Checklist & Artifacts
-
-- [x] **GitHub Repository Link**: Clean commit history
-- [x] **Postman Collection**: `mini-erp-crm.postman_collection.json` included in root
-- [x] **Database Seeding**: `npm run seed` sets up test accounts & sample records
-- [x] **Docker Setup**: `docker-compose.yml` included
-- [x] **PDF Invoice Generation**: PDFKit integration on backend
+A Postman collection is included at `mini-erp-crm.postman_collection.json` in the repository root.
